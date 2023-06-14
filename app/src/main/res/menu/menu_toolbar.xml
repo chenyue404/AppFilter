@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/miSearch"
+        android:icon="@drawable/baseline_search_24"
+        android:title="@android:string/search_go"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always|collapseActionView" />
+
+    <item
+        android:id="@+id/miFilter"
+        android:icon="@drawable/baseline_filter_alt_24"
+        android:title="@string/filter"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/miSort"
+        android:icon="@drawable/baseline_sort_24"
+        android:title="@string/sort_by"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/miSettings"
+        android:title="@string/settings" />
+</menu>
