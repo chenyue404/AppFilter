@@ -1,108 +1,46 @@
 package com.chenyue404.appfilter.ui
 
-import android.graphics.Rect
 import android.view.Menu
+import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.appcompat.widget.SearchView
 import androidx.core.view.GravityCompat
-import androidx.core.view.isVisible
+import androidx.core.view.MenuProvider
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.drawerlayout.widget.DrawerLayout.DrawerListener
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.ItemDecoration
+import androidx.fragment.app.FragmentContainerView
 import com.chenyue404.androidlib.extends.bind
-import com.chenyue404.androidlib.extends.dp2Px
 import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.extends.log
-import com.chenyue404.androidlib.extends.setOnItemClick
 import com.chenyue404.androidlib.widget.BaseActivity
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.vm.MainVM
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.progressindicator.CircularProgressIndicator
-import kotlin.math.roundToInt
 
 /**
  * Created by cy on 2023/6/13.
  */
 class MainActivity : BaseActivity() {
 
-    private val rvList: RecyclerView by bind(R.id.rvList)
     private val dlRoot: DrawerLayout by bind(R.id.dlRoot)
     private val mtb: MaterialToolbar by bind(R.id.mtb)
-    private val progressIndicator: CircularProgressIndicator by bind(R.id.progressIndicator)
-    private val tvIndicator: TextView by bind(R.id.tvIndicator)
+    private val fcv: FragmentContainerView by bind(R.id.fcv)
 
     private val mainVM: MainVM by viewModels()
 
-    private val listAdapter by lazy { AppListAdapter() }
-
-    private var miFilter: MenuItem? = null
-    private var miSearch: MenuItem? = null
-    private val searchView by lazy { miSearch?.actionView as SearchView? }
+    private val allAppsFragment by lazy { AppListFragment() }
 
     override fun getContentViewResId() = R.layout.activity_main
     override fun initView() {
-
         initToolBar()
-
         lifecycle.launch {
             mainVM.queryAllApps()
         }
-
-        rvList.apply {
-            layoutManager = LinearLayoutManager(mContext).apply {
-                setHasFixedSize(true)
-            }
-            adapter = listAdapter
-            addItemDecoration(object : ItemDecoration() {
-                val dp8 = 8.dp2Px()
-                override fun getItemOffsets(
-                    outRect: Rect,
-                    view: View,
-                    parent: RecyclerView,
-                    state: RecyclerView.State
-                ) {
-                    val position = parent.getChildAdapterPosition(view)
-                    outRect.top = if (position == 0) 0 else dp8
-                }
-            })
-            setOnItemClick(lifecycle, { _, position, _ ->
-                Toast.makeText(mContext, listAdapter.dataList[position].label, Toast.LENGTH_SHORT)
-                    .show()
-            })
-        }
-
-        mainVM.appItemList.observe(this) {
-            listAdapter.update(it)
-//            lifecycle.launch {
-//                mainVM.updateItems()
-//            }
-        }
-        mainVM.progress.observe(this) {
-            val allSize = mainVM.infoList.value?.size ?: 0
-            val progress = if (allSize > 0) {
-                it.toFloat() / allSize
-            } else {
-                0f
-            }
-            log("progress=$progress")
-            tvIndicator.apply {
-                isVisible = it > 0 && allSize > 0 && progress != 1f
-                text = "$it/$allSize"
-            }
-            progressIndicator.apply {
-                isIndeterminate = it == 0
-                this.progress = (progress * 100).roundToInt()
-                isVisible = this.progress != 100
-            }
-        }
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fcv, allAppsFragment)
+            .commit()
     }
 
     private fun initToolBar() {
@@ -126,11 +64,7 @@ class MainActivity : BaseActivity() {
             }
 
             override fun onDrawerOpened(drawerView: View) {
-                miSearch?.let {
-                    if (it.isActionViewExpanded) {
-                        it.collapseActionView()
-                    }
-                }
+                fcv.getFragment<AppListFragment>().closeSearchView()
             }
 
             override fun onDrawerClosed(drawerView: View) {
@@ -139,50 +73,21 @@ class MainActivity : BaseActivity() {
             override fun onDrawerStateChanged(newState: Int) {
             }
         })
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_toolbar, menu)
-        miFilter = menu.findItem(R.id.miFilter)
-        miSearch = menu.findItem(R.id.miSearch)
-
-        miSearch?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
-            override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                log("onMenuItemActionExpand")
-                return true
+        addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
             }
 
-            override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                log("onMenuItemActionCollapse")
-                return true
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return if (menuItem.itemId == android.R.id.home) {
+                    log("Activity home")
+                    if (!dlRoot.isDrawerOpen(GravityCompat.START)) {
+                        dlRoot.open()
+                    }
+                    true
+                } else
+                    false
             }
         })
-        searchView?.setOnCloseListener {
-            log("searchview close")
-            false
-        }
-
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val str = when (item.itemId) {
-            R.id.miFilter -> "miFilter"
-            R.id.miSearch -> "miSearch"
-            android.R.id.home -> {
-                if (!dlRoot.isDrawerOpen(GravityCompat.START)) {
-                    dlRoot.open()
-                }
-                "home"
-            }
-
-            else -> "else"
-        }
-        log(str)
-        return if (str == "else")
-            super.onOptionsItemSelected(item)
-        else
-            true
     }
 
     override fun onBackPressed() {

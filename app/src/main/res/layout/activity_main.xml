@@ -36,34 +36,15 @@
 
         </com.google.android.material.appbar.AppBarLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvList"
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/fcv"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/abl"
-            tools:itemCount="5"
-            tools:listitem="@layout/item_app_list" />
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/abl" />
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/progressIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:indeterminate="true"
-            app:layout_constraintBottom_toBottomOf="@id/rvList"
-            app:layout_constraintEnd_toEndOf="@id/rvList"
-            app:layout_constraintStart_toStartOf="@id/rvList"
-            app:layout_constraintTop_toBottomOf="@id/abl"
-            app:layout_constraintTop_toTopOf="@id/rvList" />
-
-        <TextView
-            android:id="@+id/tvIndicator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toBottomOf="@id/progressIndicator"
-            app:layout_constraintEnd_toEndOf="@id/progressIndicator"
-            app:layout_constraintStart_toStartOf="@id/progressIndicator"
-            tools:text="1/237" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
