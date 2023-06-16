@@ -1,7 +1,5 @@
-package com.chenyue404.appfilter
+package com.chenyue404.appfilter.ui
 
-import android.content.pm.ApplicationInfo
-import android.media.Image
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +7,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.entry.AppListItem
 
 /**
  * Created by cy on 2023/6/13.

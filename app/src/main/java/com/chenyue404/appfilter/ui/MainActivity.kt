@@ -1,16 +1,16 @@
-package com.chenyue404.appfilter
+package com.chenyue404.appfilter.ui
 
 import android.graphics.Rect
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.GravityCompat
+import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.drawerlayout.widget.DrawerLayout.DrawerListener
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,7 +22,11 @@ import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.extends.log
 import com.chenyue404.androidlib.extends.setOnItemClick
 import com.chenyue404.androidlib.widget.BaseActivity
+import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.vm.MainVM
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import kotlin.math.roundToInt
 
 /**
  * Created by cy on 2023/6/13.
@@ -32,6 +36,8 @@ class MainActivity : BaseActivity() {
     private val rvList: RecyclerView by bind(R.id.rvList)
     private val dlRoot: DrawerLayout by bind(R.id.dlRoot)
     private val mtb: MaterialToolbar by bind(R.id.mtb)
+    private val progressIndicator: CircularProgressIndicator by bind(R.id.progressIndicator)
+    private val tvIndicator: TextView by bind(R.id.tvIndicator)
 
     private val mainVM: MainVM by viewModels()
 
@@ -47,7 +53,7 @@ class MainActivity : BaseActivity() {
         initToolBar()
 
         lifecycle.launch {
-            mainVM.queryAllApps(mContext)
+            mainVM.queryAllApps()
         }
 
         rvList.apply {
@@ -75,6 +81,27 @@ class MainActivity : BaseActivity() {
 
         mainVM.appItemList.observe(this) {
             listAdapter.update(it)
+//            lifecycle.launch {
+//                mainVM.updateItems()
+//            }
+        }
+        mainVM.progress.observe(this) {
+            val allSize = mainVM.infoList.value?.size ?: 0
+            val progress = if (allSize > 0) {
+                it.toFloat() / allSize
+            } else {
+                0f
+            }
+            log("progress=$progress")
+            tvIndicator.apply {
+                isVisible = it > 0 && allSize > 0 && progress != 1f
+                text = "$it/$allSize"
+            }
+            progressIndicator.apply {
+                isIndeterminate = it == 0
+                this.progress = (progress * 100).roundToInt()
+                isVisible = this.progress != 100
+            }
         }
     }
 

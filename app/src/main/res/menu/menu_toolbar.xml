@@ -15,12 +15,6 @@
         app:showAsAction="always" />
 
     <item
-        android:id="@+id/miSort"
-        android:icon="@drawable/baseline_sort_24"
-        android:title="@string/sort_by"
-        app:showAsAction="always" />
-
-    <item
         android:id="@+id/miSettings"
         android:title="@string/settings" />
 </menu>

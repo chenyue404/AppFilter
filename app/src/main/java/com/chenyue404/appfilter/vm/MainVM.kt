@@ -1,7 +1,5 @@
-package com.chenyue404.appfilter
+package com.chenyue404.appfilter.vm
 
-import android.content.Context
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -11,6 +9,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.chenyue404.androidlib.ContextProvider
 import com.chenyue404.androidlib.extends.log
+import com.chenyue404.appfilter.entry.AppListItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -27,9 +26,14 @@ class MainVM : ViewModel() {
 
     private val _sort: MutableLiveData<(PackageInfo) -> Long?> = MutableLiveData()
 
-    suspend fun queryAllApps(context: Context) = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
-        val packageManager = context.packageManager
+    private val _progress: MutableLiveData<Int> = MutableLiveData(0)
+    val progress: LiveData<Int> = _progress
+
+    var startTime = 0L
+
+    suspend fun queryAllApps() = withContext(Dispatchers.IO) {
+        startTime = System.currentTimeMillis()
+        val packageManager = ContextProvider.mContext.packageManager
         val infoMutableList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             packageManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(0L))
         } else {
@@ -40,15 +44,13 @@ class MainVM : ViewModel() {
         val selector: (PackageInfo) -> Long? = {
             it.lastUpdateTime
         }
-        val appItemList = infoMutableList.sortedByDescending(selector).map {
-            val packageInfo = packageManager.getPackageInfo(it.packageName, 0)
-            AppListItem.fromPackageInfo(packageManager, packageInfo)
-        }
+        val appItemList = infoMutableList
+            .sortedByDescending(selector)
+            .mapIndexed { index, packageInfo ->
+                _progress.postValue(index + 1)
+                AppListItem.fromPackageInfo(packageManager, packageInfo)
+            }
         log((System.currentTimeMillis() - startTime).toString(), "time")
         _appItemList.postValue(appItemList)
-    }
-
-    suspend fun updateAppItemList(selector: (PackageInfo) -> Long?) = withContext(Dispatchers.IO) {
-        _infoList.value?.sortedBy(selector)
     }
 }
