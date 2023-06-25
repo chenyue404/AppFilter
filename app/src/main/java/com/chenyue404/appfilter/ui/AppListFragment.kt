@@ -95,6 +95,10 @@ class AppListFragment : BaseFragment() {
                 vm.filterList(it)
             }
         }
+        searchView?.setOnSearchClickListener {
+            vm.filter.value
+            searchView?.query.toString()
+        }
     }
 
     private fun initMenu() {

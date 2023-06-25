@@ -1,20 +1,39 @@
 package com.chenyue404.appfilter
 
 enum class Combination {
-    ParenLeft,
-    ParenRight,
     And,
     Or,
+    Not,
 }
 
 enum class Compare {
     Greater,
     Less,
     Equal,
-    Not,
     Contain,
     StartWith,
     EndWith,
+}
+
+fun Compare.cal(dataType: DataType, a: Any, b: Any): Boolean {
+    return when (this) {
+        Compare.Greater -> if (dataType == DataType.Int) {
+            (a as Int) > (b as Int)
+        } else {
+            (a as Long) > (b as Long)
+        }
+
+        Compare.Less -> if (dataType == DataType.Int) {
+            (a as Int) < (b as Int)
+        } else {
+            (a as Long) < (b as Long)
+        }
+
+        Compare.Equal -> a.toString() == b.toString()
+        Compare.Contain -> a.toString().contains(b.toString(), true)
+        Compare.StartWith -> a.toString().startsWith(b.toString(), true)
+        Compare.EndWith -> a.toString().endsWith(b.toString(), true)
+    }
 }
 
 enum class DataType {

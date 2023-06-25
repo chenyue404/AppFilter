@@ -37,4 +37,8 @@ class AppListFragmentVM : ViewModel() {
             }
         _appItemList.postValue(appItemList)
     }
+
+    fun updateKeyWord(str: String) {
+        val filterEntity = _filter.value ?: Filter()
+    }
 }
