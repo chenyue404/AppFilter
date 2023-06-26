@@ -6,6 +6,13 @@ enum class Combination {
     Not,
 }
 
+fun Combination.cal(a: Boolean, b: Boolean?) =
+    when (this) {
+        Combination.And -> a && (b ?: a)
+        Combination.Or -> a || (b ?: a)
+        Combination.Not -> !a
+    }
+
 enum class Compare {
     Greater,
     Less,
@@ -57,4 +64,5 @@ enum class DataName(val type: DataType) {
 
     IsSystem(DataType.Boolean),
     IsDebug(DataType.Boolean),
+    IsTest(DataType.Boolean),
 }

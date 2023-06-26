@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
@@ -95,10 +96,6 @@ class AppListFragment : BaseFragment() {
                 vm.filterList(it)
             }
         }
-        searchView?.setOnSearchClickListener {
-            vm.filter.value
-            searchView?.query.toString()
-        }
     }
 
     private fun initMenu() {
@@ -123,6 +120,18 @@ class AppListFragment : BaseFragment() {
                     log("searchview close")
                     false
                 }
+                searchView?.setOnQueryTextListener(object : OnQueryTextListener {
+                    override fun onQueryTextSubmit(query: String?): Boolean {
+                        log("onQueryTextSubmit")
+                        return false
+                    }
+
+                    override fun onQueryTextChange(newText: String?): Boolean {
+                        log("onQueryTextChange")
+                        vm.updateKeyWord(newText ?: "")
+                        return true
+                    }
+                })
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {

@@ -18,7 +18,13 @@ class AppListFragmentVM : ViewModel() {
     private val _filter: MutableLiveData<Filter> = MutableLiveData()
     val filter: LiveData<Filter> = _filter
 
-    private val _appItemList: MediatorLiveData<List<AppListItem>> = MediatorLiveData()
+    private val _allAppItemList: MediatorLiveData<List<AppListItem>> = MediatorLiveData()
+    private val _appItemList: MediatorLiveData<List<AppListItem>> =
+        MediatorLiveData<List<AppListItem>>().apply {
+            addSource(_allAppItemList) {
+                postValue(it)
+            }
+        }
     val appItemList: LiveData<List<AppListItem>> = _appItemList
 
     private val _progress: MutableLiveData<Int> = MutableLiveData(0)
@@ -35,10 +41,13 @@ class AppListFragmentVM : ViewModel() {
                 _progress.postValue(index + 1)
                 AppListItem.fromPackageInfo(packageManager, packageInfo)
             }
-        _appItemList.postValue(appItemList)
+        _allAppItemList.postValue(appItemList)
     }
 
     fun updateKeyWord(str: String) {
-        val filterEntity = _filter.value ?: Filter()
+        _appItemList.postValue(_allAppItemList.value?.filter {
+            it.label?.contains(str) == true
+                    || it.packageName.contains(str)
+        })
     }
 }

@@ -42,4 +42,7 @@ dependencies {
     annotationProcessor "androidx.room:room-compiler:$room_version"
 
     implementation 'com.github.chenyue404:AndroidLib:1.0.11'
+
+    implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
+    implementation 'com.github.tiann:FreeReflection:3.1.0'
 }
