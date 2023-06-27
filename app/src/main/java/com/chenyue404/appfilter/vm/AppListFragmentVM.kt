@@ -48,6 +48,6 @@ class AppListFragmentVM : ViewModel() {
         _appItemList.postValue(_allAppItemList.value?.filter {
             it.label?.contains(str) == true
                     || it.packageName.contains(str)
-        })
+        } ?: emptyList())
     }
 }

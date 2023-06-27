@@ -1,5 +1,6 @@
 package com.chenyue404.appfilter.ui
 
+import android.content.Intent
 import android.graphics.Rect
 import android.view.Menu
 import android.view.MenuInflater
@@ -20,6 +21,7 @@ import com.chenyue404.androidlib.extends.dp2Px
 import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.extends.log
 import com.chenyue404.androidlib.extends.setOnItemClick
+import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.androidlib.widget.BaseFragment
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.vm.AppListFragmentVM
@@ -37,7 +39,7 @@ class AppListFragment : BaseFragment() {
 
     private var miFilter: MenuItem? = null
     private var miSearch: MenuItem? = null
-    private val searchView by lazy { miSearch?.actionView as SearchView? }
+    private var searchView: SearchView? = null
 
     private val mainVM: MainVM by activityViewModels()
     private val vm: AppListFragmentVM by viewModels()
@@ -102,6 +104,7 @@ class AppListFragment : BaseFragment() {
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                 menuInflater.inflate(R.menu.menu_toolbar, menu)
+                log("onCreateMenu")
                 miFilter = menu.findItem(R.id.miFilter)
                 miSearch = menu.findItem(R.id.miSearch)
 
@@ -116,6 +119,7 @@ class AppListFragment : BaseFragment() {
                         return true
                     }
                 })
+                searchView = miSearch?.actionView as SearchView?
                 searchView?.setOnCloseListener {
                     log("searchview close")
                     false
@@ -123,7 +127,7 @@ class AppListFragment : BaseFragment() {
                 searchView?.setOnQueryTextListener(object : OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
                         log("onQueryTextSubmit")
-                        return false
+                        return true
                     }
 
                     override fun onQueryTextChange(newText: String?): Boolean {
@@ -136,14 +140,15 @@ class AppListFragment : BaseFragment() {
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 val str = when (menuItem.itemId) {
-                    R.id.miFilter -> "miFilter"
+                    R.id.miFilter -> {
+                        startActivity(
+                            Intent(mContext, FilterActivity::class.java)
+                                .putExtra("filter", vm.filter.value?.let { GsonUtil.toJson(it) })
+                        )
+                        "miFilter"
+                    }
+
                     R.id.miSearch -> "miSearch"
-//                    android.R.id.home -> {
-//                        if (!dlRoot.isDrawerOpen(GravityCompat.START)) {
-//                            dlRoot.open()
-//                        }
-//                        "home"
-//                    }
                     else -> "else"
                 }
                 log(str)

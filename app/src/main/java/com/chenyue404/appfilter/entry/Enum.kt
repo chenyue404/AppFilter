@@ -1,16 +1,14 @@
-package com.chenyue404.appfilter
+package com.chenyue404.appfilter.entry
 
 enum class Combination {
     And,
     Or,
-    Not,
 }
 
-fun Combination.cal(a: Boolean, b: Boolean?) =
+fun Combination.cal(a: Boolean, b: Boolean) =
     when (this) {
-        Combination.And -> a && (b ?: a)
-        Combination.Or -> a || (b ?: a)
-        Combination.Not -> !a
+        Combination.And -> a && b
+        Combination.Or -> a || b
     }
 
 enum class Compare {

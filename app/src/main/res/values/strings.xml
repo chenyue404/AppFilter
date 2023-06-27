@@ -3,4 +3,6 @@
     <string name="filter">Filter</string>
     <string name="settings">Settings</string>
     <string name="sort_by">Sort by</string>
+    <string name="is">is</string>
+    <string name="not">not</string>
 </resources>
