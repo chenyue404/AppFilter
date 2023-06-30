@@ -27,6 +27,14 @@ data class SimpleCondition(
     val data: Any,
     override var not: Boolean = false,
 ) : Condition {
+    companion object {
+        fun default() = SimpleCondition(
+            DataName.PackageName,
+            Compare.Contain,
+            ""
+        )
+    }
+
     override fun evaluate(packageInfo: PackageInfo): Boolean {
         val value = when (name) {
             DataName.CompileSdkVersion -> cal(

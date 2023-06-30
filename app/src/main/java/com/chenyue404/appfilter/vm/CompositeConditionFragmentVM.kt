@@ -3,7 +3,9 @@ package com.chenyue404.appfilter.vm
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.chenyue404.appfilter.entry.Combination
 import com.chenyue404.appfilter.entry.CompositeCondition
+import com.chenyue404.appfilter.entry.Condition
 
 /**
  * Created by cy on 2023/6/26.
@@ -13,6 +15,31 @@ class CompositeConditionFragmentVM : ViewModel() {
     val condition: LiveData<CompositeCondition> = _condition
 
     fun updateCondition(compositeCondition: CompositeCondition) {
+        _condition.postValue(compositeCondition)
+    }
+
+    fun addConditionItem(condition: Condition) {
+        val compositeCondition = (_condition.value ?: CompositeCondition()).apply {
+            list.add(condition)
+        }
+        _condition.postValue(compositeCondition)
+    }
+
+    fun toggleCombination() {
+        val compositeCondition = (_condition.value ?: CompositeCondition()).apply {
+            combination = combination.getReverse()
+        }
+        _condition.postValue(compositeCondition)
+    }
+
+    fun toggleNot() {
+        val compositeCondition = (_condition.value ?: CompositeCondition()).apply {
+            combination = if (combination == Combination.And) {
+                Combination.Or
+            } else {
+                Combination.And
+            }
+        }
         _condition.postValue(compositeCondition)
     }
 }

@@ -1,15 +1,17 @@
 package com.chenyue404.appfilter.entry
 
-enum class Combination {
-    And,
-    Or,
-}
+enum class Combination(val type: Boolean) {
+    And(true),
+    Or(false);
 
-fun Combination.cal(a: Boolean, b: Boolean) =
-    when (this) {
-        Combination.And -> a && b
-        Combination.Or -> a || b
-    }
+    fun cal(a: Boolean, b: Boolean) =
+        when (this) {
+            And -> a && b
+            Or -> a || b
+        }
+
+    fun getReverse() = if (type) Or else And
+}
 
 enum class Compare {
     Greater,

@@ -21,15 +21,21 @@ import com.chenyue404.appfilter.entry.SimpleCondition
  * Created by cy on 2023/6/26.
  */
 class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
+    interface ActionListener {
+        fun update(index: Int, condition: Condition) {}
+        fun delete(index: Int) {}
+    }
 
     private val dataList: MutableList<Condition> = mutableListOf()
+
+    var actionListener: ActionListener? = null
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val btName: Button? = view.findViewById(R.id.btName)
         val btNot: ToggleButton? = view.findViewById(R.id.btNot)
         val btCompare: Button? = view.findViewById(R.id.btCompare)
         val etData: EditText? = view.findViewById(R.id.etData)
-        val btDelete: Button? = view.findViewById(R.id.btDelete)
+        val ivDelete: ImageView? = view.findViewById(R.id.ivDelete)
 
         val tvId: TextView? = view.findViewById(R.id.tvId)
         val ivArrow: ImageView? = view.findViewById(R.id.ivArrow)
@@ -63,16 +69,19 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         val condition = dataList[position]
         if (viewType == 0) {
             val simpleCondition = condition as SimpleCondition
-            holder.btName?.text = simpleCondition.name.name
+            holder.btName?.let {
+                it.text = simpleCondition.name.name
+                it.click {
+                }
+            }
             holder.btNot?.isChecked = simpleCondition.not == true
             holder.btCompare?.text = simpleCondition.compare.name
             holder.etData?.setText(simpleCondition.data.toString())
         } else {
             val compositeCondition = condition as CompositeCondition
         }
-        holder.btDelete?.click {
-            dataList.remove(condition)
-            notifyItemRemoved(position)
+        holder.ivDelete?.click {
+            actionListener?.delete(position)
         }
     }
 
@@ -103,4 +112,14 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     && oldItem.toString() == newItem.toString()
         }
     }
+
+//    private class ChooseDataNameDialogFragment : DialogFragment() {
+//        override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+//            AlertDialog.Builder(requireContext())
+//                .setMessage()
+//
+//
+//            return dialog
+//        }
+//    }
 }

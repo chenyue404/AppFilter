@@ -6,6 +6,7 @@ import com.chenyue404.androidlib.extends.bind
 import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.androidlib.widget.BaseActivity
 import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.entry.CompositeCondition
 import com.chenyue404.appfilter.entry.Filter
 import com.chenyue404.appfilter.vm.FilterActivityVM
 import com.google.android.material.appbar.MaterialToolbar
@@ -33,6 +34,10 @@ class FilterActivity : BaseActivity() {
             }
             .commit()
         vm.filter.observe(this) {
+            filterFragment.updateCondition(
+                (it?.condition as CompositeCondition?)
+                    ?: CompositeCondition()
+            )
         }
 
 //        val filter1 = Filter(

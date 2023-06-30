@@ -5,4 +5,6 @@
     <string name="sort_by">Sort by</string>
     <string name="is">is</string>
     <string name="not">not</string>
+    <string name="and">and</string>
+    <string name="or">or</string>
 </resources>
