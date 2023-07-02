@@ -7,9 +7,11 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chenyue404.androidlib.extends.click
+import com.chenyue404.androidlib.extends.log
 import com.chenyue404.androidlib.widget.BaseFragment
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.entry.CompositeCondition
+import com.chenyue404.appfilter.entry.Condition
 import com.chenyue404.appfilter.entry.SimpleCondition
 import com.chenyue404.appfilter.util.bind
 import com.chenyue404.appfilter.vm.CompositeConditionFragmentVM
@@ -47,12 +49,24 @@ class CompositeConditionFragment : BaseFragment() {
         btCombination.click {
             vm.toggleCombination()
         }
+        val a = CompositeCondition()
+        val b = CompositeCondition()
+        log("${a == b}, $a, $b")
     }
 
     private fun initListView() {
         rvList.apply {
             layoutManager = LinearLayoutManager(mContext)
             adapter = listAdapter
+        }
+        listAdapter.actionListener = object : ConditionListAdapter.ActionListener {
+            override fun update(index: Int, condition: Condition) {
+                vm.updateConditionItem(index, condition)
+            }
+
+            override fun delete(index: Int) {
+                vm.deleteConditionItem(index)
+            }
         }
     }
 

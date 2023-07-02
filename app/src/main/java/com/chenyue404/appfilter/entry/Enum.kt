@@ -19,27 +19,36 @@ enum class Compare {
     Equal,
     Contain,
     StartWith,
-    EndWith,
-}
+    EndWith;
 
-fun Compare.cal(dataType: DataType, a: Any, b: Any): Boolean {
-    return when (this) {
-        Compare.Greater -> if (dataType == DataType.Int) {
-            (a as Int) > (b as Int)
-        } else {
-            (a as Long) > (b as Long)
+    fun cal(dataType: DataType, a: Any, b: Any): Boolean {
+        return when (this) {
+            Compare.Greater -> if (dataType == DataType.Int) {
+                (a as Int) > (b as Int)
+            } else {
+                (a as Long) > (b as Long)
+            }
+
+            Compare.Less -> if (dataType == DataType.Int) {
+                (a as Int) < (b as Int)
+            } else {
+                (a as Long) < (b as Long)
+            }
+
+            Compare.Equal -> a.toString() == b.toString()
+            Compare.Contain -> a.toString().contains(b.toString(), true)
+            Compare.StartWith -> a.toString().startsWith(b.toString(), true)
+            Compare.EndWith -> a.toString().endsWith(b.toString(), true)
         }
+    }
 
-        Compare.Less -> if (dataType == DataType.Int) {
-            (a as Int) < (b as Int)
-        } else {
-            (a as Long) < (b as Long)
+    companion object {
+        fun getMatchArray(dataType: DataType) = when (dataType) {
+            DataType.Boolean -> arrayOf(Equal)
+            DataType.String -> arrayOf(Equal, Contain, StartWith, EndWith)
+            DataType.Int -> values()
+            DataType.Long -> values()
         }
-
-        Compare.Equal -> a.toString() == b.toString()
-        Compare.Contain -> a.toString().contains(b.toString(), true)
-        Compare.StartWith -> a.toString().startsWith(b.toString(), true)
-        Compare.EndWith -> a.toString().endsWith(b.toString(), true)
     }
 }
 
