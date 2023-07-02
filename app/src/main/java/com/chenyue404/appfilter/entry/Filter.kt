@@ -4,7 +4,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Build
 import com.chenyue404.appfilter.util.ReflectionUtil
-import java.util.UUID
 
 /**
  * 过滤器
@@ -20,8 +19,6 @@ data class Filter(
 interface Condition {
     var not: Boolean
     fun evaluate(packageInfo: PackageInfo): Boolean
-
-    fun getUUID(): UUID
 }
 
 data class SimpleCondition(
@@ -30,8 +27,6 @@ data class SimpleCondition(
     var data: Any,
     override var not: Boolean = false,
 ) : Condition {
-    private val id: UUID = UUID.randomUUID()
-
     companion object {
         fun default() = SimpleCondition(
             DataName.PackageName,
@@ -85,18 +80,6 @@ data class SimpleCondition(
         return if (not) !value else value
     }
 
-    override fun getUUID() = id
-    override fun equals(other: Any?): Boolean {
-        return this === other
-                || (other is SimpleCondition
-                && toString() == other.toString()
-                && getUUID() == other.getUUID())
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode() * 31 + id.hashCode()
-    }
-
     private fun cal(a: Any) = compare.cal(name.type, a, data)
     private fun PackageInfo.getField(filedName: String) =
         ReflectionUtil.getFiled(filedName, this) ?: when (name.type) {
@@ -112,7 +95,6 @@ data class CompositeCondition(
     var combination: Combination = Combination.And,
     override var not: Boolean = false,
 ) : Condition {
-    private val id: UUID = UUID.randomUUID()
     override fun evaluate(packageInfo: PackageInfo): Boolean {
         var result = true
         list.forEachIndexed { index, condition ->
@@ -123,17 +105,5 @@ data class CompositeCondition(
             }
         }
         return if (not) !result else result
-    }
-
-    override fun getUUID() = id
-    override fun equals(other: Any?): Boolean {
-        return this === other
-                || (other is CompositeCondition
-                && toString() == other.toString()
-                && getUUID() == other.getUUID())
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode() * 31 + id.hashCode()
     }
 }

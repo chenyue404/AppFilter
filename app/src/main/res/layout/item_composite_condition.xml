@@ -46,6 +46,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.fragment.app.FragmentContainerView
+        android:visibility="gone"
         android:id="@+id/fcv"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

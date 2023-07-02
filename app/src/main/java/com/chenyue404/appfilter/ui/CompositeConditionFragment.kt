@@ -3,10 +3,10 @@ package com.chenyue404.appfilter.ui
 import android.view.View
 import android.widget.ImageView
 import android.widget.ToggleButton
-import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chenyue404.androidlib.extends.click
+import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.extends.log
 import com.chenyue404.androidlib.widget.BaseFragment
 import com.chenyue404.appfilter.R
@@ -14,7 +14,7 @@ import com.chenyue404.appfilter.entry.CompositeCondition
 import com.chenyue404.appfilter.entry.Condition
 import com.chenyue404.appfilter.entry.SimpleCondition
 import com.chenyue404.appfilter.util.bind
-import com.chenyue404.appfilter.vm.CompositeConditionFragmentVM
+import kotlinx.coroutines.delay
 
 /**
  * Created by cy on 2023/6/26.
@@ -25,33 +25,37 @@ class CompositeConditionFragment : BaseFragment() {
     private val ivAdd: ImageView by bind(R.id.ivAdd)
     private val rvList: RecyclerView by bind(R.id.rvList)
 
-    private val vm: CompositeConditionFragmentVM by viewModels()
     private val listAdapter: ConditionListAdapter by lazy { ConditionListAdapter() }
+    private var mCondition = CompositeCondition()
 
     override fun getContentViewResId() = R.layout.fragment_composite_condition
     override fun initView(root: View) {
         initListView()
-        vm.condition.observe(this) {
-            btNot.isChecked = it.not
-            btCombination.isChecked = it.combination.type
-            listAdapter.updateList(it.list)
-        }
+        loadData()
         ivAdd.click {
-            vm.addConditionItem(SimpleCondition.default())
+            addItem(SimpleCondition.default())
         }
         ivAdd.setOnLongClickListener {
-            vm.addConditionItem(CompositeCondition())
+            addItem(CompositeCondition())
             true
         }
-        btNot.setOnCheckedChangeListener { _, _ ->
-            vm.toggleNot()
+        btNot.setOnCheckedChangeListener { _, isChecked ->
+            mCondition.not = isChecked
         }
         btCombination.click {
-            vm.toggleCombination()
+            mCondition.combination = mCondition.combination.getReverse()
         }
         val a = CompositeCondition()
         val b = CompositeCondition()
         log("${a == b}, $a, $b")
+    }
+
+    private fun loadData() {
+        with(mCondition) {
+            btNot.isChecked = not
+            btCombination.isChecked = combination.type
+            listAdapter.updateList(list)
+        }
     }
 
     private fun initListView() {
@@ -61,16 +65,26 @@ class CompositeConditionFragment : BaseFragment() {
         }
         listAdapter.actionListener = object : ConditionListAdapter.ActionListener {
             override fun update(index: Int, condition: Condition) {
-                vm.updateConditionItem(index, condition)
+                mCondition.list[index] = condition
             }
 
             override fun delete(index: Int) {
-                vm.deleteConditionItem(index)
+                mCondition.list.removeAt(index)
             }
         }
     }
 
     fun updateCondition(compositeCondition: CompositeCondition) {
-        vm.updateCondition(compositeCondition)
+        mCondition = compositeCondition
+        loadData()
+    }
+
+    private fun addItem(condition: Condition) {
+        mCondition.list.add(condition)
+        listAdapter.addItem(condition)
+        lifecycle.launch {
+            delay(300)
+            rvList.scrollToPosition(listAdapter.itemCount - 1)
+        }
     }
 }

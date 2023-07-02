@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -12,12 +13,12 @@ import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentContainerView
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.chenyue404.androidlib.extends.click
-import com.chenyue404.androidlib.extends.log
+import com.chenyue404.androidlib.util.KeyboardUtil
 import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.entry.Combination
 import com.chenyue404.appfilter.entry.Compare
 import com.chenyue404.appfilter.entry.CompositeCondition
 import com.chenyue404.appfilter.entry.Condition
@@ -29,9 +30,21 @@ import com.chenyue404.appfilter.entry.SimpleCondition
  * Created by cy on 2023/6/26.
  */
 class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
+
+    companion object {
+        private const val key_not = "not"
+        private const val key_name = "name"
+        private const val key_compare = "compare"
+        private const val key_data = "data"
+        private const val key_combination = "combination"
+        private const val key_list = "list"
+        private const val type_simple = 0
+        private const val type_composite = 1
+    }
+
     interface ActionListener {
-        fun update(index: Int, condition: Condition) {}
-        fun delete(index: Int) {}
+        fun update(index: Int, condition: Condition)
+        fun delete(index: Int)
     }
 
     private val dataList: MutableList<Condition> = mutableListOf()
@@ -48,25 +61,123 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         val tvId: TextView? = view.findViewById(R.id.tvId)
         val ivArrow: ImageView? = view.findViewById(R.id.ivArrow)
         val fcv: FragmentContainerView? = view.findViewById(R.id.fcv)
+
+        fun initClick(
+            dataList: MutableList<Condition>,
+            onDeleteItem: (position: Int) -> Unit,
+            onUpdateItem: (position: Int, payload: Bundle?) -> Unit
+        ) {
+            ivDelete?.click {
+                onDeleteItem(bindingAdapterPosition)
+            }
+            btName?.click {
+                ChooseDataNameDialog.get(
+                    it.context, { dataName ->
+                        onUpdateItem(
+                            bindingAdapterPosition, Bundle().apply {
+                                putString(key_name, dataName.name)
+                            }
+                        )
+                    },
+                    (dataList[bindingAdapterPosition] as SimpleCondition).name
+                ).show()
+            }
+            btNot?.setOnCheckedChangeListener { buttonView, isChecked ->
+                onUpdateItem(bindingAdapterPosition, Bundle().apply {
+                    putBoolean(key_not, isChecked)
+                })
+            }
+            btCompare?.click {
+                val position = bindingAdapterPosition
+                ChooseCompareDialog.get(
+                    it.context,
+                    (dataList[position] as SimpleCondition).name.type, { compare ->
+                        onUpdateItem(position, Bundle().apply {
+                            putString(key_compare, compare.name)
+                        })
+                    },
+                    (dataList[position] as SimpleCondition).compare
+                ).show()
+            }
+            etData?.setOnEditorActionListener { v, actionId, event ->
+                var result = false
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    result = true
+                    KeyboardUtil.hideSoftInput(v)
+                    onUpdateItem(bindingAdapterPosition, Bundle().apply {
+                        putString(key_data, (v as EditText).text.toString())
+                    })
+                }
+                result
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         return VH(
             LayoutInflater.from(parent.context).inflate(
-                if (viewType == 0) {
+                if (viewType == type_simple) {
                     R.layout.item_simple_condition
                 } else {
                     R.layout.item_composite_condition
                 }, parent, false
             )
-        )
+        ).apply {
+            initClick(dataList,
+                onDeleteItem = {
+                    actionListener?.delete(it)
+                    dataList.removeAt(it)
+                    notifyItemRemoved(it)
+                },
+                onUpdateItem = { position, payload ->
+                    val newCondition = updateConditionByPayload(dataList[position], payload)
+                    payload?.let {
+                        this@ConditionListAdapter.onBindViewHolder(
+                            this,
+                            position,
+                            mutableListOf(payload)
+                        )
+                    }
+                    actionListener?.update(position, newCondition)
+                })
+        }
+    }
+
+    private fun updateConditionByPayload(condition: Condition, payload: Bundle?): Condition {
+        payload ?: return condition
+        payload.get(key_not)?.let {
+            condition.not = it as Boolean
+        }
+        val combination = payload.getString(key_combination)
+        val list = payload.getString(key_list)
+        if (combination != null || list != null) {
+            condition as CompositeCondition
+            combination?.let {
+                condition.combination = Combination.valueOf(it)
+            }
+            list?.let {
+                condition.list = GsonUtil.listFromJson<Condition>(list).toMutableList()
+            }
+        } else {
+            condition as SimpleCondition
+            payload.getString(key_name)?.let {
+                condition.name = DataName.valueOf(it)
+            }
+            payload.getString(key_compare)?.let {
+                condition.compare = Compare.valueOf(it)
+            }
+            payload.get(key_data)?.let {
+                condition.data = it
+            }
+        }
+        return condition
     }
 
     override fun getItemViewType(position: Int): Int {
         return if (dataList[position] is SimpleCondition) {
-            0
+            type_simple
         } else {
-            1
+            type_composite
         }
     }
 
@@ -75,53 +186,24 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
     override fun onBindViewHolder(holder: VH, position: Int) {
         val viewType = getItemViewType(position)
         val condition = dataList[position]
-        if (viewType == 0) {
-            val simpleCondition = condition as SimpleCondition
-            holder.btName?.apply {
-                text = simpleCondition.name.name
-                click {
-                    ChooseDataNameDialog.get(it.context, { dataName ->
-                        actionListener?.update(
-                            holder.bindingAdapterPosition,
-                            simpleCondition.apply { name = dataName }
-                        )
-                    }).show()
-                }
-            }
-            holder.btNot?.apply {
-                isChecked = simpleCondition.not == true
-                setOnCheckedChangeListener { _, isChecked ->
-                    actionListener?.update(
-                        holder.bindingAdapterPosition,
-                        simpleCondition.apply { not = isChecked }
-                    )
-                }
-            }
-            holder.btCompare?.apply {
-                text = simpleCondition.compare.name
-                click {
-                    ChooseCompareDialog.get(it.context, simpleCondition.name.type, { compare ->
-                        actionListener?.update(
-                            holder.bindingAdapterPosition,
-                            simpleCondition.apply { this.compare = compare }
-                        )
-                    }).show()
-                }
-            }
+        if (viewType == type_simple) {
+            condition as SimpleCondition
+            holder.btName?.text = condition.name.name
+            holder.btNot?.isChecked = condition.not == true
+            holder.btCompare?.text = condition.compare.name
             holder.etData?.apply {
-                setText(simpleCondition.data.toString())
-                setOnEditorActionListener { v, actionId, event ->
-                    log("actionId=$actionId, event=$event")
-                    true
-                }
+                setText(condition.data.toString())
+                setSelection(text.length)
             }
         } else {
-            val compositeCondition = condition as CompositeCondition
-            holder.tvId?.text = compositeCondition.list.size.toString()
+            condition as CompositeCondition
+            holder.tvId?.text = condition.list.size.toString()
         }
         holder.ivDelete?.click {
-            val clickPosition = dataList.indexOf(condition)
+            val clickPosition = holder.bindingAdapterPosition
             actionListener?.delete(clickPosition)
+            dataList.removeAt(clickPosition)
+            notifyItemRemoved(clickPosition)
         }
     }
 
@@ -130,97 +212,45 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             onBindViewHolder(holder, position)
             return
         }
+        val itemType = getItemViewType(position)
         payloads.forEach { payload ->
             val bundle = payload as Bundle
-            val condition = dataList[position]
-            val combination = bundle.getString("combination")
-            val list = bundle.getString("list")
-            if (combination != null || list != null) {
-                condition as CompositeCondition
-                combination?.let {
-                    holder.tvId?.text = condition.list.size.toString()
+            if (itemType == type_composite) {
+                bundle.getString(key_list)?.let {
+                    holder.tvId?.text = GsonUtil.listFromJson<Condition>(it).size.toString()
                 }
             } else {
-                condition as SimpleCondition
-                holder.btName?.text = condition.name.name
-                holder.btCompare?.text = condition.compare.name
-                holder.btNot?.isChecked = condition.not
-                holder.etData?.apply {
-                    setText(condition.data.toString())
-                    setSelection(text.length)
+                payload.getString(key_name)?.let {
+                    holder.btName?.text = it
+                }
+                payload.getString(key_compare)?.let {
+                    holder.btCompare?.text = it
+                }
+                payload.get(key_data)?.let {
+                    holder.etData?.apply {
+                        setText(it.toString())
+                        setSelection(text.length)
+                    }
+                }
+                payload.get(key_not)?.let {
+                    holder.btNot?.isChecked = it == false
                 }
             }
         }
     }
 
     fun updateList(list: List<Condition>) {
-        val diff = DiffUtil.calculateDiff(DiffUtilCallback(dataList, list))
         dataList.clear()
         dataList.addAll(list)
-        diff.dispatchUpdatesTo(this)
+        notifyDataSetChanged()
     }
 
-    class DiffUtilCallback(
-        private val oldList: List<Condition>,
-        private val newList: List<Condition>,
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize() = oldList.size
-
-        override fun getNewListSize() = newList.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val oldItem = oldList.getOrNull(oldItemPosition)
-            val newItem = newList.getOrNull(newItemPosition)
-            val result = (oldItem != null
-                    && newItem != null
-                    && oldItem.javaClass == newItem.javaClass
-                    && oldItem.getUUID() == newItem.getUUID())
-            return result
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val oldItem = oldList.getOrNull(oldItemPosition)
-            val newItem = newList.getOrNull(newItemPosition)
-            val result = (oldItem != null
-                    && newItem != null
-                    && oldItem.toString() == newItem.toString())
-            return result
-        }
-
-        override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {
-            val oldItem = oldList[oldItemPosition]
-            val newItem = newList[newItemPosition]
-            val bundle = Bundle()
-            if (oldItem.not != newItem.not) {
-                bundle.putBoolean("not", newItem.not)
-            }
-            if (oldItem is SimpleCondition) {
-                newItem as SimpleCondition
-                if (oldItem.name != newItem.name) {
-                    bundle.putString("name", newItem.name.name)
-                }
-                if (oldItem.compare != newItem.compare) {
-                    bundle.putString("compare", newItem.compare.name)
-                }
-                if (oldItem.data != newItem.data) {
-                    bundle.putString("data", newItem.data.toString())
-                }
-            }
-            if (oldItem is CompositeCondition) {
-                newItem as CompositeCondition
-                if (oldItem.combination != newItem.combination) {
-                    bundle.putString("combination", newItem.combination.name)
-                }
-                if (oldItem.list.joinToString() != newItem.list.joinToString()) {
-                    bundle.putString("list", GsonUtil.toJson(newItem.list))
-                }
-            }
-            return bundle.takeIf { it.size() > 0 }
-        }
+    fun addItem(condition: Condition) {
+        dataList.add(condition)
+        notifyItemInserted(dataList.size - 1)
     }
 
     private object ChooseDataNameDialog {
-        private var mDialog: AlertDialog? = null
         private val dataNameArray by lazy { DataName.values().map { it.name }.toTypedArray() }
         fun get(
             context: Context,
@@ -229,32 +259,25 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         ): AlertDialog {
             val beforeCheckedIndex = beforeChecked?.let { dataNameArray.indexOf(it.name) } ?: -1
             var afterDataName: DataName? = null
-            if (mDialog == null) {
-                mDialog = AlertDialog.Builder(context)
-                    .setSingleChoiceItems(
-                        dataNameArray,
-                        beforeCheckedIndex
-                    ) { _, which ->
-                        afterDataName = DataName.valueOf(dataNameArray[which])
+            return AlertDialog.Builder(context)
+                .setSingleChoiceItems(
+                    dataNameArray,
+                    beforeCheckedIndex
+                ) { _, which ->
+                    afterDataName = DataName.valueOf(dataNameArray[which])
+                }
+                .setPositiveButton(android.R.string.ok) { dialog, which ->
+                    dialog.cancel()
+                    afterDataName?.let {
+                        chooseListener?.invoke(it)
                     }
-                    .setPositiveButton(android.R.string.ok) { dialog, which ->
-                        dialog.cancel()
-                        afterDataName?.let {
-                            chooseListener?.invoke(it)
-                        }
-                    }
-                    .create()
-            }
-            beforeCheckedIndex.takeIf { it != -1 }?.let {
-                mDialog?.listView?.setItemChecked(it, true)
-            }
-            return mDialog!!
+                }
+                .create()
         }
     }
 
 
     private object ChooseCompareDialog {
-        private var mDialog: AlertDialog? = null
         fun get(
             context: Context,
             dataType: DataType,
@@ -264,26 +287,20 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             val compareArray = Compare.getMatchArray(dataType)
             val beforeCheckedIndex = beforeChecked?.let { compareArray.indexOf(it) } ?: -1
             var afterCompare: Compare? = null
-            if (mDialog == null) {
-                mDialog = AlertDialog.Builder(context)
-                    .setSingleChoiceItems(
-                        compareArray.map { it.name }.toTypedArray(),
-                        beforeCheckedIndex
-                    ) { _, which ->
-                        afterCompare = compareArray[which]
+            return AlertDialog.Builder(context)
+                .setSingleChoiceItems(
+                    compareArray.map { it.name }.toTypedArray(),
+                    beforeCheckedIndex
+                ) { _, which ->
+                    afterCompare = compareArray[which]
+                }
+                .setPositiveButton(android.R.string.ok) { dialog, which ->
+                    dialog.cancel()
+                    afterCompare?.let {
+                        chooseListener?.invoke(it)
                     }
-                    .setPositiveButton(android.R.string.ok) { dialog, which ->
-                        dialog.cancel()
-                        afterCompare?.let {
-                            chooseListener?.invoke(it)
-                        }
-                    }
-                    .create()
-            }
-            beforeCheckedIndex.takeIf { it != -1 }?.let {
-                mDialog?.listView?.setItemChecked(it, true)
-            }
-            return mDialog!!
+                }
+                .create()
         }
     }
 }
