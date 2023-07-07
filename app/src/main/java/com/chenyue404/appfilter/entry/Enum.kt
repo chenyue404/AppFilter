@@ -1,5 +1,8 @@
 package com.chenyue404.appfilter.entry
 
+import android.content.Context
+import com.chenyue404.appfilter.R
+
 enum class Combination(val type: Boolean) {
     And(true),
     Or(false);
@@ -56,7 +59,14 @@ enum class DataType {
     Int,
     String,
     Boolean,
-    Long,
+    Long;
+
+    fun getHintText(context: Context) =
+        when (this) {
+            Boolean -> context.getString(R.string.true_or_false)
+            String -> context.getString(R.string.text)
+            else -> context.getString(R.string.number)
+        }
 }
 
 enum class DataName(val type: DataType) {

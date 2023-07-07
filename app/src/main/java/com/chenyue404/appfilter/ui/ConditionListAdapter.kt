@@ -194,6 +194,7 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             holder.etData?.apply {
                 setText(condition.data.toString())
                 setSelection(text.length)
+                hint = condition.name.type.getHintText(context)
             }
         } else {
             condition as CompositeCondition
@@ -222,6 +223,8 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             } else {
                 payload.getString(key_name)?.let {
                     holder.btName?.text = it
+                    holder.etData?.hint =
+                        DataName.valueOf(it).type.getHintText(holder.itemView.context)
                 }
                 payload.getString(key_compare)?.let {
                     holder.btCompare?.text = it
@@ -233,7 +236,7 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     }
                 }
                 payload.get(key_not)?.let {
-                    holder.btNot?.isChecked = it == false
+                    holder.btNot?.isChecked = it == true
                 }
             }
         }

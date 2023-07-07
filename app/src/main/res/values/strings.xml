@@ -7,4 +7,7 @@
     <string name="not">not</string>
     <string name="and">and</string>
     <string name="or">or</string>
+    <string name="true_or_false">True or false</string>
+    <string name="text">Text</string>
+    <string name="number">Number</string>
 </resources>
