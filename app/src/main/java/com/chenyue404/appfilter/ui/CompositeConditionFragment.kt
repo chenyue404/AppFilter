@@ -26,7 +26,8 @@ class CompositeConditionFragment : BaseFragment() {
     private val rvList: RecyclerView by bind(R.id.rvList)
 
     private val listAdapter: ConditionListAdapter by lazy { ConditionListAdapter() }
-    private var mCondition = CompositeCondition()
+    var mCondition = CompositeCondition()
+        private set
 
     override fun getContentViewResId() = R.layout.fragment_composite_condition
     override fun initView(root: View) {

@@ -1,5 +1,6 @@
 package com.chenyue404.appfilter.ui
 
+import android.content.Intent
 import androidx.activity.viewModels
 import androidx.fragment.app.FragmentContainerView
 import com.chenyue404.androidlib.extends.bind
@@ -23,11 +24,11 @@ class FilterActivity : BaseActivity() {
     private val fcv: FragmentContainerView by bind(R.id.fcv)
 
     private val vm: FilterActivityVM by viewModels()
+    private val filterFragment by lazy { CompositeConditionFragment() }
 
     override fun getContentViewResId() = R.layout.activity_filter
     override fun initView() {
         mtb.setNavigationOnClickListener { finish() }
-        val filterFragment = CompositeConditionFragment()
         supportFragmentManager.beginTransaction()
             .replace(fcv.id, filterFragment)
             .runOnCommit {
@@ -58,9 +59,15 @@ class FilterActivity : BaseActivity() {
     override fun initBeforeSetContent() {
         super.initBeforeSetContent()
         intent.getStringExtra(extra_key_filter)?.let {
-            vm.updateFilter(
-                GsonUtil.fromJson(it, Filter::class.java)
-            )
+            vm.updateFilter(GsonUtil.fromJson(it, Filter::class.java))
         }
+    }
+
+    override fun finish() {
+        setResult(
+            RESULT_OK,
+            Intent().putExtra(extra_key_filter, GsonUtil.toJson(filterFragment.mCondition))
+        )
+        super.finish()
     }
 }

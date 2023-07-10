@@ -8,6 +8,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.SearchView.OnQueryTextListener
 import androidx.core.view.MenuProvider
@@ -24,6 +25,7 @@ import com.chenyue404.androidlib.extends.setOnItemClick
 import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.androidlib.widget.BaseFragment
 import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.entry.CompositeCondition
 import com.chenyue404.appfilter.vm.AppListFragmentVM
 import com.chenyue404.appfilter.vm.MainVM
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -45,6 +47,13 @@ class AppListFragment : BaseFragment() {
     private val vm: AppListFragmentVM by viewModels()
 
     private val listAdapter by lazy { AppListAdapter() }
+    private val openFilter =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val strExtra = it.data?.getStringExtra(FilterActivity.extra_key_filter)
+                ?: return@registerForActivityResult
+            val compositeCondition = GsonUtil.fromJson(strExtra, CompositeCondition::class.java)
+            vm.updateFilterCondition(compositeCondition)
+        }
 
     override fun getContentViewResId() = R.layout.fragment_app_list
     override fun initView(root: View) {
@@ -141,9 +150,11 @@ class AppListFragment : BaseFragment() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 val str = when (menuItem.itemId) {
                     R.id.miFilter -> {
-                        startActivity(
+                        openFilter.launch(
                             Intent(mContext, FilterActivity::class.java)
-                                .putExtra("filter", vm.filter.value?.let { GsonUtil.toJson(it) })
+                                .putExtra(
+                                    FilterActivity.extra_key_filter,
+                                    vm.filter.value?.let { GsonUtil.toJson(it) })
                         )
                         "miFilter"
                     }

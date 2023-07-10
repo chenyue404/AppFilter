@@ -27,15 +27,15 @@ enum class Compare {
     fun cal(dataType: DataType, a: Any, b: Any): Boolean {
         return when (this) {
             Compare.Greater -> if (dataType == DataType.Int) {
-                (a as Int) > (b as Int)
+                (a.toString().toInt()) > (b.toString().toInt())
             } else {
-                (a as Long) > (b as Long)
+                (a.toString().toLong()) > (b.toString().toLong())
             }
 
             Compare.Less -> if (dataType == DataType.Int) {
-                (a as Int) < (b as Int)
+                (a.toString().toInt()) < (b.toString().toInt())
             } else {
-                (a as Long) < (b as Long)
+                (a.toString().toLong()) < (b.toString().toLong())
             }
 
             Compare.Equal -> a.toString() == b.toString()
@@ -76,10 +76,10 @@ enum class DataName(val type: DataType) {
 
     FirstInstallTime(DataType.Long),
     LastUpdateTime(DataType.Long),
+    VersionCode(DataType.Long),
 
     PackageName(DataType.String),
     VersionName(DataType.String),
-    VersionCode(DataType.Long),
 
     IsSystem(DataType.Boolean),
     IsDebug(DataType.Boolean),
