@@ -85,16 +85,15 @@ class AppListFragment : BaseFragment() {
             listAdapter.update(it)
         }
         vm.progress.observe(this) {
-            val allSize = mainVM.infoList.value?.size ?: 0
+            val allSize = vm.progressTotal
             val progress = if (allSize > 0) {
                 it.toFloat() / allSize
             } else {
                 0f
             }
-            log("progress=$progress")
             tvIndicator.apply {
                 isVisible = it > 0 && allSize > 0 && progress != 1f
-                text = "$it/$allSize"
+                text = "${vm.progressStepStr} $it/$allSize"
             }
             progressIndicator.apply {
 //                isIndeterminate = it == 0

@@ -31,4 +31,7 @@ data class AppListItem(
             iconDrawable = pkgManager.getApplicationIcon(packageInfo.packageName),
         )
     }
+
+    fun getPackageInfo(pkgManager: PackageManager): PackageInfo =
+        pkgManager.getPackageInfo(packageName, 0)
 }
