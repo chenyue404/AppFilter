@@ -4,7 +4,6 @@ import android.content.Intent
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
-import androidx.activity.viewModels
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.Lifecycle
@@ -13,39 +12,41 @@ import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.androidlib.widget.BaseActivity
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.entry.CompositeCondition
-import com.chenyue404.appfilter.entry.Filter
-import com.chenyue404.appfilter.vm.FilterActivityVM
 import com.google.android.material.appbar.MaterialToolbar
 
 /**
- * Created by cy on 2023/6/26.
+ * Created by cy on 2023/7/13.
  */
-class FilterActivity : BaseActivity() {
+class CompositeConditionActivity : BaseActivity() {
     companion object {
-        const val extra_key_filter = "extra_key_filter"
+        const val extra_key_composite_condition = "extra_key_composite_condition"
+        const val extra_key_from_position = "extra_key_from_position"
     }
 
     private val mtb: MaterialToolbar by bind(R.id.mtb)
     private val fcv: FragmentContainerView by bind(R.id.fcv)
 
-    private val vm: FilterActivityVM by viewModels()
     private val filterFragment by lazy { CompositeConditionFragment() }
+    private var condition: CompositeCondition? = null
+    private var fromPosition = 0
 
     override fun getContentViewResId() = R.layout.activity_filter
     override fun initView() {
         initToolbar()
-        mtb.setNavigationOnClickListener { finish() }
         supportFragmentManager.beginTransaction()
             .replace(fcv.id, filterFragment)
             .runOnCommit {
+                condition?.let { filterFragment.updateCondition(it) }
             }
             .commit()
-        vm.filter.observe(this) {
-            filterFragment.updateCondition(
-                (it?.condition as CompositeCondition?)
-                    ?: CompositeCondition()
-            )
+    }
+
+    override fun initBeforeSetContent() {
+        super.initBeforeSetContent()
+        intent.getStringExtra(extra_key_composite_condition)?.let {
+            condition = GsonUtil.fromJson(it, CompositeCondition::class.java)
         }
+        fromPosition = intent.getIntExtra(extra_key_from_position, 0)
     }
 
     private fun initToolbar() {
@@ -53,7 +54,7 @@ class FilterActivity : BaseActivity() {
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
-            title = "Filter"
+            title = "Composite Condition"
         }
         addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -71,8 +72,11 @@ class FilterActivity : BaseActivity() {
                         setResult(
                             RESULT_OK,
                             Intent().putExtra(
-                                extra_key_filter,
+                                extra_key_composite_condition,
                                 GsonUtil.toJson(filterFragment.mCondition)
+                            ).putExtra(
+                                extra_key_from_position,
+                                fromPosition
                             )
                         )
                         finish()
@@ -86,10 +90,4 @@ class FilterActivity : BaseActivity() {
         }, this, Lifecycle.State.RESUMED)
     }
 
-    override fun initBeforeSetContent() {
-        super.initBeforeSetContent()
-        intent.getStringExtra(extra_key_filter)?.let {
-            vm.updateFilter(GsonUtil.fromJson(it, Filter::class.java))
-        }
-    }
 }

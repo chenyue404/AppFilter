@@ -1,13 +1,15 @@
 package com.chenyue404.appfilter.ui
 
+import android.content.Intent
 import android.view.View
 import android.widget.ImageView
 import android.widget.ToggleButton
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chenyue404.androidlib.extends.click
 import com.chenyue404.androidlib.extends.launch
-import com.chenyue404.androidlib.extends.log
+import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.androidlib.widget.BaseFragment
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.entry.CompositeCondition
@@ -28,6 +30,17 @@ class CompositeConditionFragment : BaseFragment() {
     private val listAdapter: ConditionListAdapter by lazy { ConditionListAdapter() }
     var mCondition = CompositeCondition()
         private set
+    private val compositeConditionActivityLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val strExtra =
+                it.data?.getStringExtra(CompositeConditionActivity.extra_key_composite_condition)
+                    ?: return@registerForActivityResult
+            val compositeCondition = GsonUtil.fromJson(strExtra, CompositeCondition::class.java)
+            val position =
+                it.data?.getIntExtra(CompositeConditionActivity.extra_key_from_position, 0) ?: 0
+            listAdapter.updateItem(compositeCondition, position)
+            mCondition.list[position] = compositeCondition
+        }
 
     override fun getContentViewResId() = R.layout.fragment_composite_condition
     override fun initView(root: View) {
@@ -46,9 +59,6 @@ class CompositeConditionFragment : BaseFragment() {
         btCombination.click {
             mCondition.combination = mCondition.combination.getReverse()
         }
-        val a = CompositeCondition()
-        val b = CompositeCondition()
-        log("${a == b}, $a, $b")
     }
 
     private fun loadData() {
@@ -73,6 +83,9 @@ class CompositeConditionFragment : BaseFragment() {
                 mCondition.list.removeAt(index)
             }
         }
+        listAdapter.compositeConditionActivityLauncher = {
+            compositeConditionActivityLauncher.launch(it)
+        }
     }
 
     fun updateCondition(compositeCondition: CompositeCondition) {
@@ -87,5 +100,9 @@ class CompositeConditionFragment : BaseFragment() {
             delay(300)
             rvList.scrollToPosition(listAdapter.itemCount - 1)
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
     }
 }

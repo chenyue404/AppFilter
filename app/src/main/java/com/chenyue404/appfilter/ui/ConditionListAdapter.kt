@@ -1,6 +1,7 @@
 package com.chenyue404.appfilter.ui
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -50,6 +51,7 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
     private val dataList: MutableList<Condition> = mutableListOf()
 
     var actionListener: ActionListener? = null
+    var compositeConditionActivityLauncher: ((intent: Intent) -> Unit)? = null
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val btName: Button? = view.findViewById(R.id.btName)
@@ -65,7 +67,8 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         fun initClick(
             dataList: MutableList<Condition>,
             onDeleteItem: (position: Int) -> Unit,
-            onUpdateItem: (position: Int, payload: Bundle?) -> Unit
+            onUpdateItem: (position: Int, payload: Bundle?) -> Unit,
+            compositeConditionActivityLauncher: ((intent: Intent) -> Unit)? = null
         ) {
             ivDelete?.click {
                 onDeleteItem(bindingAdapterPosition)
@@ -110,6 +113,20 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                 }
                 result
             }
+            itemView.click {
+                if (itemViewType == type_simple) return@click
+                val intent = Intent(it.context, CompositeConditionActivity::class.java).apply {
+                    putExtra(
+                        CompositeConditionActivity.extra_key_composite_condition,
+                        GsonUtil.toJson(dataList[bindingAdapterPosition])
+                    )
+                    putExtra(
+                        CompositeConditionActivity.extra_key_from_position,
+                        bindingAdapterPosition
+                    )
+                }
+                compositeConditionActivityLauncher?.invoke(intent)
+            }
         }
     }
 
@@ -123,7 +140,8 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                 }, parent, false
             )
         ).apply {
-            initClick(dataList,
+            initClick(
+                dataList,
                 onDeleteItem = {
                     actionListener?.delete(it)
                     dataList.removeAt(it)
@@ -139,7 +157,10 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                         )
                     }
                     actionListener?.update(position, newCondition)
-                })
+                },
+                compositeConditionActivityLauncher
+            )
+
         }
     }
 
@@ -253,6 +274,11 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         notifyItemInserted(dataList.size - 1)
     }
 
+    fun updateItem(condition: Condition, position: Int) {
+        dataList[position] = condition
+        notifyItemChanged(position)
+    }
+
     private object ChooseDataNameDialog {
         private val dataNameArray by lazy { DataName.values().map { it.name }.toTypedArray() }
         fun get(
@@ -274,6 +300,9 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     afterDataName?.let {
                         chooseListener?.invoke(it)
                     }
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ ->
+                    dialog.cancel()
                 }
                 .create()
         }
@@ -302,6 +331,9 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     afterCompare?.let {
                         chooseListener?.invoke(it)
                     }
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ ->
+                    dialog.cancel()
                 }
                 .create()
         }
