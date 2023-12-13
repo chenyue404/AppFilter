@@ -7,6 +7,7 @@ import android.widget.ToggleButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.chenyue404.androidlib.extends.bind
 import com.chenyue404.androidlib.extends.click
 import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.util.json.GsonUtil
@@ -15,7 +16,6 @@ import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.entry.CompositeCondition
 import com.chenyue404.appfilter.entry.Condition
 import com.chenyue404.appfilter.entry.SimpleCondition
-import com.chenyue404.appfilter.util.bind
 import kotlinx.coroutines.delay
 
 /**
