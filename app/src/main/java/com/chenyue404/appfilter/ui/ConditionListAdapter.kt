@@ -200,12 +200,13 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
                         )
+                        isSingleLine = true
                         setText(oldData.toString())
                         setSelection(text.length)
                     }
                     okListener = {
                         KeyboardUtil.hideSoftInput(rootView as EditText)
-                        val str = (rootView as EditText).editableText.trim().toString()
+                        val str = (rootView as EditText).editableText.toString()
                         val contentLegal = str.isNotEmpty() && when (dataType) {
                             DataType.Int -> str.toIntOrNull() != null
                             DataType.Long -> str.toLongOrNull() != null
@@ -228,7 +229,7 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                         }
                         textOn = true.toString()
                         textOff = false.toString()
-                        isChecked = oldData == true
+                        isChecked = oldData.toString().equals("true", true)
                     }
                     okListener = {
                         updateListener?.invoke((rootView as ToggleButton).isChecked)
@@ -383,15 +384,16 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     notifyItemRemoved(it)
                 },
                 onUpdateItem = { position, payload ->
-                    val newCondition = updateConditionByPayload(dataList[position], payload)
+                    updateConditionByPayload(dataList[position], payload)
                     payload?.let {
-                        this@ConditionListAdapter.onBindViewHolder(
-                            this,
-                            position,
-                            mutableListOf(payload)
-                        )
+//                        this@ConditionListAdapter.onBindViewHolder(
+//                            this,
+//                            position,
+//                            mutableListOf(payload)
+//                        )
+                        this@ConditionListAdapter.onBindViewHolder(this, position)
                     }
-                    actionListener?.update(position, newCondition)
+                    actionListener?.update(position, dataList[position])
                 },
                 compositeConditionActivityLauncher
             )
@@ -399,8 +401,8 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         }
     }
 
-    private fun updateConditionByPayload(condition: Condition, payload: Bundle?): Condition {
-        payload ?: return condition
+    private fun updateConditionByPayload(condition: Condition, payload: Bundle?) {
+        payload ?: return
         payload.get(key_not)?.let {
             condition.not = it as Boolean
         }
@@ -425,8 +427,29 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             payload.get(key_data)?.let {
                 condition.data = it
             }
+
+            val dataType = condition.name.type
+            val matchArray = Compare.getMatchArray(dataType)
+            if (!matchArray.contains(condition.compare)) {
+                condition.compare = matchArray.first()
+            }
+
+
+            when (dataType) {
+                DataType.Int, DataType.Long, DataType.Date -> {
+                    if (!condition.data.toString().isDigitsOnly()) {
+                        condition.data = 0
+                    }
+                }
+
+                DataType.Boolean -> {
+                    condition.data = condition.data.toString().equals("true", true)
+                }
+
+                else -> {}
+            }
         }
-        return condition
+        return
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -487,10 +510,14 @@ class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                     holder.btCompare?.text = it
                 }
                 payload.get(key_data)?.let {
-                    val dataName = DataName.valueOf(holder.btName?.text.toString())
-                    val compare = Compare.valueOf(holder.btCompare?.text.toString())
+                    val condition = dataList[position] as SimpleCondition
                     holder.btData?.apply {
-                        text = showDataText(context, it.toString(), dataName, compare)
+                        text = showDataText(
+                            context,
+                            it.toString(),
+                            condition.name,
+                            condition.compare
+                        )
                     }
                 }
                 payload.get(key_not)?.let {
