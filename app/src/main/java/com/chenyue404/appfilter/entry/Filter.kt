@@ -83,8 +83,7 @@ data class SimpleCondition(
     private fun cal(a: Any) = compare.cal(name.type, a, data)
     private fun PackageInfo.getField(filedName: String) =
         ReflectionUtil.getFiled(filedName, this) ?: when (name.type) {
-            DataType.Int -> 0
-            DataType.Long -> 0L
+            DataType.Int, DataType.Long, DataType.Date -> 0
             DataType.String -> ""
             DataType.Boolean -> false
         }

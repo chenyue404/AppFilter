@@ -11,4 +11,10 @@
     <string name="text">Text</string>
     <string name="number">Number</string>
     <string name="save">Save</string>
+    <string name="Days">Days</string>
+    <string name="Hours">Hours</string>
+    <string name="Minutes">Minutes</string>
+    <string name="Seconds">Seconds</string>
+    <string name="digitsOnly">Digits only</string>
+    <string name="tooBig">Too big</string>
 </resources>

@@ -1,7 +1,6 @@
 package com.chenyue404.appfilter.entry
 
-import android.content.Context
-import com.chenyue404.appfilter.R
+import com.chenyue404.appfilter.entry.Compare.Within
 
 enum class Combination(val type: Boolean) {
     And(true),
@@ -16,41 +15,40 @@ enum class Combination(val type: Boolean) {
     fun getReverse() = if (type) Or else And
 }
 
+/**
+ * @property Within 在x天x小时x秒以内
+ */
 enum class Compare {
     Greater,
-    Less,
+    Within,
     Equal,
     Contain,
-    StartWith,
-    EndWith;
+    Regex;
 
     fun cal(dataType: DataType, a: Any, b: Any): Boolean {
         return when (this) {
-            Compare.Greater -> if (dataType == DataType.Int) {
-                (a.toString().toInt()) > (b.toString().toInt())
-            } else {
-                (a.toString().toLong()) > (b.toString().toLong())
-            }
+            Greater ->
+                if (dataType == DataType.Int) {
+                    (a.toString().toInt()) > (b.toString().toInt())
+                } else {
+                    (a.toString().toLong()) > (b.toString().toLong())
+                }
 
-            Compare.Less -> if (dataType == DataType.Int) {
-                (a.toString().toInt()) < (b.toString().toInt())
-            } else {
-                (a.toString().toLong()) < (b.toString().toLong())
-            }
+            Within -> System.currentTimeMillis() - a.toString().toLong() <
+                    b.toString().toLong() * 1000
 
-            Compare.Equal -> a.toString() == b.toString()
-            Compare.Contain -> a.toString().contains(b.toString(), true)
-            Compare.StartWith -> a.toString().startsWith(b.toString(), true)
-            Compare.EndWith -> a.toString().endsWith(b.toString(), true)
+            Equal -> a.toString() == b.toString()
+            Contain -> a.toString().contains(b.toString(), true)
+            Regex -> b.toString().toRegex().containsMatchIn(a.toString())
         }
     }
 
     companion object {
         fun getMatchArray(dataType: DataType) = when (dataType) {
             DataType.Boolean -> arrayOf(Equal)
-            DataType.String -> arrayOf(Equal, Contain, StartWith, EndWith)
-            DataType.Int -> values()
-            DataType.Long -> values()
+            DataType.String -> arrayOf(Equal, Contain, Regex)
+            DataType.Int, DataType.Long -> arrayOf(Greater, Equal, Contain, Regex)
+            DataType.Date -> arrayOf(Greater, Within)
         }
     }
 }
@@ -59,14 +57,8 @@ enum class DataType {
     Int,
     String,
     Boolean,
-    Long;
-
-    fun getHintText(context: Context) =
-        when (this) {
-            Boolean -> context.getString(R.string.true_or_false)
-            String -> context.getString(R.string.text)
-            else -> context.getString(R.string.number)
-        }
+    Long,
+    Date;
 }
 
 enum class DataName(val type: DataType) {
@@ -74,9 +66,10 @@ enum class DataName(val type: DataType) {
     TargetSdkVersion(DataType.Int),
     MinSdkVersion(DataType.Int),
 
-    FirstInstallTime(DataType.Long),
-    LastUpdateTime(DataType.Long),
     VersionCode(DataType.Long),
+
+    FirstInstallTime(DataType.Date),
+    LastUpdateTime(DataType.Date),
 
     PackageName(DataType.String),
     VersionName(DataType.String),

@@ -1,21 +1,29 @@
 package com.chenyue404.appfilter.ui
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.ToggleButton
 import androidx.appcompat.app.AlertDialog
+import androidx.core.text.isDigitsOnly
+import androidx.core.view.children
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentContainerView
 import androidx.recyclerview.widget.RecyclerView
 import com.chenyue404.androidlib.extends.click
+import com.chenyue404.androidlib.extends.dp2Px
+import com.chenyue404.androidlib.extends.log
+import com.chenyue404.androidlib.extends.string
+import com.chenyue404.androidlib.util.DateUtil
 import com.chenyue404.androidlib.util.KeyboardUtil
 import com.chenyue404.androidlib.util.json.GsonUtil
 import com.chenyue404.appfilter.R
@@ -26,11 +34,14 @@ import com.chenyue404.appfilter.entry.Condition
 import com.chenyue404.appfilter.entry.DataName
 import com.chenyue404.appfilter.entry.DataType
 import com.chenyue404.appfilter.entry.SimpleCondition
+import com.google.android.material.textfield.TextInputLayout
+import java.util.Calendar
+import java.util.Date
 
 /**
  * Created by cy on 2023/6/26.
  */
-class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
+class ConditionListAdapter() : RecyclerView.Adapter<ConditionListAdapter.VH>() {
 
     companion object {
         private const val key_not = "not"
@@ -41,6 +52,16 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         private const val key_list = "list"
         private const val type_simple = 0
         private const val type_composite = 1
+
+        fun timeStampToDHMS(time: Long): Array<Number> {
+            val days = time / DateUtil.ONE_DAY_TIME
+            val hours = (time - days * DateUtil.ONE_DAY_TIME) / DateUtil.ONE_HOUR_TIME
+            val minutes =
+                (time - days * DateUtil.ONE_DAY_TIME - hours * DateUtil.ONE_HOUR_TIME) / DateUtil.ONE_MIN_TIME
+            val seconds =
+                (time - days * DateUtil.ONE_DAY_TIME - hours * DateUtil.ONE_HOUR_TIME - minutes * DateUtil.ONE_MIN_TIME) / 1000
+            return arrayOf(days, hours, minutes, seconds)
+        }
     }
 
     interface ActionListener {
@@ -57,7 +78,7 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         val btName: Button? = view.findViewById(R.id.btName)
         val btNot: ToggleButton? = view.findViewById(R.id.btNot)
         val btCompare: Button? = view.findViewById(R.id.btCompare)
-        val etData: EditText? = view.findViewById(R.id.etData)
+        val btData: Button? = view.findViewById(R.id.btData)
         val ivDelete: ImageView? = view.findViewById(R.id.ivDelete)
 
         val tvId: TextView? = view.findViewById(R.id.tvId)
@@ -92,26 +113,29 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             }
             btCompare?.click {
                 val position = bindingAdapterPosition
-                ChooseCompareDialog.get(
+                val condition = dataList[position] as SimpleCondition
+                buildChooseCompareDialog(
                     it.context,
-                    (dataList[position] as SimpleCondition).name.type, { compare ->
+                    condition.name.type, { compare ->
                         onUpdateItem(position, Bundle().apply {
                             putString(key_compare, compare.name)
                         })
                     },
-                    (dataList[position] as SimpleCondition).compare
+                    condition.compare
                 ).show()
             }
-            etData?.setOnEditorActionListener { v, actionId, event ->
-                var result = false
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    result = true
-                    KeyboardUtil.hideSoftInput(v)
+            btData?.click {
+                val position = bindingAdapterPosition
+                val condition = dataList[position] as SimpleCondition
+                showEditDataDialog(
+                    it.context,
+                    condition,
+                ) {
                     onUpdateItem(bindingAdapterPosition, Bundle().apply {
-                        putString(key_data, (v as EditText).text.toString())
+                        putString(key_data, it.toString())
                     })
                 }
-                result
+
             }
             itemView.click {
                 if (itemViewType == type_simple) return@click
@@ -127,6 +151,217 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
                 }
                 compositeConditionActivityLauncher?.invoke(intent)
             }
+        }
+
+        private fun buildChooseCompareDialog(
+            context: Context,
+            dataType: DataType,
+            chooseListener: ((compare: Compare) -> Unit)? = null,
+            beforeChecked: Compare? = null
+        ): AlertDialog {
+            val compareArray = Compare.getMatchArray(dataType)
+            val beforeCheckedIndex = beforeChecked?.let { compareArray.indexOf(it) } ?: -1
+            var afterCompare: Compare? = null
+            return AlertDialog.Builder(context)
+                .setSingleChoiceItems(
+                    compareArray.map { it.name }.toTypedArray(),
+                    beforeCheckedIndex
+                ) { _, which ->
+                    afterCompare = compareArray[which]
+                }
+                .setPositiveButton(android.R.string.ok) { dialog, _ ->
+                    dialog.cancel()
+                    afterCompare?.let {
+                        chooseListener?.invoke(it)
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel) { dialog, _ ->
+                    dialog.cancel()
+                }
+                .create()
+        }
+
+        private fun showEditDataDialog(
+            context: Context,
+            condition: SimpleCondition,
+            updateListener: ((newData: Any) -> Unit)? = null
+        ) {
+            val name = condition.name
+            val dataType = name.type
+            val compare = condition.compare
+            val oldData = condition.data
+            var rootView: View? = null
+            var okListener: (() -> Boolean)? = null
+            val dp8 = 8.dp2Px()
+            when (dataType) {
+                DataType.Int, DataType.Long, DataType.String -> {
+                    rootView = EditText(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                        setText(oldData.toString())
+                        setSelection(text.length)
+                    }
+                    okListener = {
+                        KeyboardUtil.hideSoftInput(rootView as EditText)
+                        val str = (rootView as EditText).editableText.trim().toString()
+                        val contentLegal = str.isNotEmpty() && when (dataType) {
+                            DataType.Int -> str.toIntOrNull() != null
+                            DataType.Long -> str.toLongOrNull() != null
+                            else -> true
+                        }
+                        if (contentLegal) {
+                            updateListener?.invoke(str)
+                        }
+                        contentLegal
+                    }
+                }
+
+                DataType.Boolean -> {
+                    rootView = ToggleButton(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            setPadding(dp8, 0, dp8, 0)
+                        }
+                        textOn = true.toString()
+                        textOff = false.toString()
+                        isChecked = oldData == true
+                    }
+                    okListener = {
+                        updateListener?.invoke((rootView as ToggleButton).isChecked)
+                        true
+                    }
+                }
+
+                DataType.Date -> {
+                    if (compare == Compare.Greater) {
+                        val oldDate = oldData.toString().toLongOrNull()?.let { Date(it) } ?: Date()
+                        val calendar = Calendar.getInstance().apply {
+                            time = oldDate
+                        }
+                        val newCalendar = Calendar.getInstance()
+                        val timePickListener =
+                            TimePickerDialog.OnTimeSetListener { view, hourOfDay, minute ->
+                                log("$hourOfDay, $minute")
+                                newCalendar.apply {
+                                    set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                    set(Calendar.MINUTE, minute)
+                                }
+                                updateListener?.invoke(newCalendar.timeInMillis)
+                            }
+                        val datePickListener =
+                            DatePickerDialog.OnDateSetListener { view, year, month, dayOfMonth ->
+                                log("$year, $month, $dayOfMonth")
+                                newCalendar.apply {
+                                    set(Calendar.YEAR, year)
+                                    set(Calendar.MONTH, month)
+                                    set(Calendar.DATE, dayOfMonth)
+                                }
+                                TimePickerDialog(
+                                    context,
+                                    timePickListener,
+                                    calendar.get(Calendar.HOUR_OF_DAY),
+                                    calendar.get(Calendar.MINUTE),
+                                    true
+                                ).show()
+                            }
+                        DatePickerDialog(
+                            context,
+                            datePickListener,
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DATE)
+                        ).show()
+                    } else {
+                        rootView = LayoutInflater.from(context)
+                            .inflate(R.layout.layout_relative_time_dailog_content, null)
+                        val tooBig = context.string(R.string.tooBig)
+                        val inputLayouts = (rootView as ViewGroup).children
+                            .filter { it is TextInputLayout }
+                        val dhms = timeStampToDHMS((oldData.toString().toLongOrNull() ?: 0L) * 1000)
+                        inputLayouts.forEachIndexed { index, inputLayout ->
+                            val maxNum = when (index) {
+                                1 -> 23
+                                2 -> 59
+                                3 -> 59
+                                else -> Int.MAX_VALUE
+                            }
+                            (inputLayout as TextInputLayout).editText?.apply {
+                                doAfterTextChanged {
+                                    if (it?.isDigitsOnly() == false) {
+                                        inputLayout.error = context.string(R.string.digitsOnly)
+                                        return@doAfterTextChanged
+                                    } else {
+                                        val str = it?.toString()
+                                        val num = str?.toIntOrNull() ?: 0
+                                        if (num == 0 && it?.toString()
+                                                ?.isEmpty() == false && it.toString() != "0"
+                                        ) {
+                                            inputLayout.error = tooBig
+                                            return@doAfterTextChanged
+                                        } else if (num > maxNum) {
+                                            inputLayout.error = tooBig
+                                            return@doAfterTextChanged
+                                        } else {
+                                            val numStr = num.toString()
+                                            if (str != numStr) {
+                                                inputLayout.editText?.apply {
+                                                    setText(numStr)
+                                                    setSelection(numStr.length)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    inputLayout.error = null
+                                }
+                                setText(dhms[index].toString())
+                            }
+                        }
+                        okListener = {
+                            KeyboardUtil.hideSoftInput(rootView)
+                            var contentLegal = true
+                            var totalNum = 0L
+                            inputLayouts.forEachIndexed { index, view ->
+                                val inputLayout = view as TextInputLayout
+                                if (inputLayout.error.isNullOrEmpty()) {
+                                    val text = inputLayout.editText?.text.toString()
+                                    val num = text.toIntOrNull() ?: 0
+                                    val plusNum = when (index) {
+                                        0 -> num * DateUtil.ONE_DAY_TIME
+                                        1 -> num * DateUtil.ONE_HOUR_TIME
+                                        2 -> num * DateUtil.ONE_MIN_TIME
+                                        else -> num * 1000L
+                                    }
+                                    totalNum += plusNum
+                                } else {
+                                    contentLegal = false
+                                }
+                            }
+                            updateListener?.invoke(totalNum / 1000)
+                            contentLegal
+                        }
+                    }
+                }
+            }
+            rootView ?: return
+            AlertDialog.Builder(context)
+                .setTitle(name.name)
+                .setView(rootView)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, null)
+                .create()
+                .apply {
+                    setOnShowListener {
+                        getButton(AlertDialog.BUTTON_POSITIVE).click {
+                            val shouldCancel = okListener?.invoke() ?: true
+                            if (shouldCancel) cancel()
+                        }
+                    }
+                }
+                .show()
         }
     }
 
@@ -212,10 +447,13 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             holder.btName?.text = condition.name.name
             holder.btNot?.isChecked = condition.not == true
             holder.btCompare?.text = condition.compare.name
-            holder.etData?.apply {
-                setText(condition.data.toString())
-                setSelection(text.length)
-                hint = condition.name.type.getHintText(context)
+            holder.btData?.apply {
+                text = showDataText(
+                    context,
+                    condition.data.toString(),
+                    condition.name,
+                    condition.compare
+                )
             }
         } else {
             condition as CompositeCondition
@@ -244,16 +482,15 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
             } else {
                 payload.getString(key_name)?.let {
                     holder.btName?.text = it
-                    holder.etData?.hint =
-                        DataName.valueOf(it).type.getHintText(holder.itemView.context)
                 }
                 payload.getString(key_compare)?.let {
                     holder.btCompare?.text = it
                 }
                 payload.get(key_data)?.let {
-                    holder.etData?.apply {
-                        setText(it.toString())
-                        setSelection(text.length)
+                    val dataName = DataName.valueOf(holder.btName?.text.toString())
+                    val compare = Compare.valueOf(holder.btCompare?.text.toString())
+                    holder.btData?.apply {
+                        text = showDataText(context, it.toString(), dataName, compare)
                     }
                 }
                 payload.get(key_not)?.let {
@@ -308,34 +545,29 @@ class ConditionListAdapter : RecyclerView.Adapter<ConditionListAdapter.VH>() {
         }
     }
 
-
-    private object ChooseCompareDialog {
-        fun get(
-            context: Context,
-            dataType: DataType,
-            chooseListener: ((compare: Compare) -> Unit)? = null,
-            beforeChecked: Compare? = null
-        ): AlertDialog {
-            val compareArray = Compare.getMatchArray(dataType)
-            val beforeCheckedIndex = beforeChecked?.let { compareArray.indexOf(it) } ?: -1
-            var afterCompare: Compare? = null
-            return AlertDialog.Builder(context)
-                .setSingleChoiceItems(
-                    compareArray.map { it.name }.toTypedArray(),
-                    beforeCheckedIndex
-                ) { _, which ->
-                    afterCompare = compareArray[which]
-                }
-                .setPositiveButton(android.R.string.ok) { dialog, which ->
-                    dialog.cancel()
-                    afterCompare?.let {
-                        chooseListener?.invoke(it)
-                    }
-                }
-                .setNegativeButton(android.R.string.cancel) { dialog, _ ->
-                    dialog.cancel()
-                }
-                .create()
+    private fun showDataText(
+        context: Context,
+        dataStr: String,
+        dataName: DataName,
+        compare: Compare
+    ): String {
+        val result = if (dataName.type != DataType.Date) {
+            dataStr
+        } else {
+            if (compare == Compare.Greater) {
+                DateUtil.timeStampToString(
+                    dataStr.toLongOrNull() ?: 0L,
+                    "yyyy-MM-dd HH:mm"
+                )
+            } else {
+                val num = (dataStr.toLongOrNull() ?: 0) * 1000L
+                val dhms = timeStampToDHMS(num)
+                dhms[0].toString() + "d " +
+                        dhms[1] + "h " +
+                        dhms[2] + "m " +
+                        dhms[3] + "s"
+            }
         }
+        return result
     }
 }
