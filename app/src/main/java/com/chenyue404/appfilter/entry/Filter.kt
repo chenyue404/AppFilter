@@ -3,6 +3,7 @@ package com.chenyue404.appfilter.entry
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Build
+import com.chenyue404.androidlib.ContextProvider
 import com.chenyue404.appfilter.util.ReflectionUtil
 
 /**
@@ -58,6 +59,12 @@ data class SimpleCondition(
             DataName.FirstInstallTime -> cal(packageInfo.firstInstallTime)
 
             DataName.LastUpdateTime -> cal(packageInfo.lastUpdateTime)
+
+            DataName.Label -> cal(
+                ContextProvider.mContext.packageManager.getApplicationLabel(
+                    packageInfo.applicationInfo
+                )
+            )
 
             DataName.PackageName -> cal(packageInfo.packageName)
 

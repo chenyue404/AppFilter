@@ -71,6 +71,7 @@ enum class DataName(val type: DataType) {
     FirstInstallTime(DataType.Date),
     LastUpdateTime(DataType.Date),
 
+    Label(DataType.String),
     PackageName(DataType.String),
     VersionName(DataType.String),
 

@@ -14,6 +14,7 @@ import androidx.fragment.app.FragmentContainerView
 import com.chenyue404.androidlib.extends.bind
 import com.chenyue404.androidlib.extends.launch
 import com.chenyue404.androidlib.extends.log
+import com.chenyue404.androidlib.extends.string
 import com.chenyue404.androidlib.widget.BaseActivity
 import com.chenyue404.appfilter.R
 import com.chenyue404.appfilter.vm.MainVM
@@ -30,7 +31,13 @@ class MainActivity : BaseActivity() {
 
     private val mainVM: MainVM by viewModels()
 
-    private val allAppsFragment by lazy { AppListFragment() }
+    private val allAppsFragment by lazy {
+        AppListFragment().apply {
+            changeTitleFun = {
+                supportActionBar?.title = string(R.string.app_name) + it
+            }
+        }
+    }
 
     override fun getContentViewResId() = R.layout.activity_main
     override fun initView() {

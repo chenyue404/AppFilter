@@ -55,6 +55,8 @@ class AppListFragment : BaseFragment() {
             vm.updateFilterCondition(compositeCondition)
         }
 
+    var changeTitleFun: ((str: String) -> Unit)? = null
+
     override fun getContentViewResId() = R.layout.fragment_app_list
     override fun initView(root: View) {
         initMenu()
@@ -83,6 +85,7 @@ class AppListFragment : BaseFragment() {
 
         vm.appItemList.observe(this) {
             listAdapter.update(it)
+            changeTitleFun?.invoke("(${it.size})")
         }
         vm.progress.observe(this) {
             val allSize = vm.progressTotal
